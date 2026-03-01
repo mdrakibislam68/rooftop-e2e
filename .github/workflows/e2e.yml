@@ -1,0 +1,19 @@
+name: Run E2E Tests
+
+on:
+  repository_dispatch:
+    types: [run-e2e]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+  
+    steps:
+      - name: Checkout E2E Repo
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run E2E Tests
+        run: npm run test
