@@ -1,10 +1,18 @@
 const { By, Builder, Browser, until } = require('selenium-webdriver');
+const chrome = require('selenium-webdriver/chrome');
+
+let options = new chrome.Options();
+options.addArguments('--headless');
+options.addArguments('--no-sandbox');
+options.addArguments('--disable-dev-shm-usage');
+options.addArguments('--disable-gpu');
+options.addArguments('--window-size=1920,1080');
 
 (async function firstTest() {
   let driver;
 
   try {
-    driver = await new Builder().forBrowser(Browser.CHROME).build();
+    driver = await new Builder().forBrowser(Browser.CHROME).setChromeOptions(options).build();
     await driver.get('https://dev-rooftop.boomdevs.net/');
 
     /**
