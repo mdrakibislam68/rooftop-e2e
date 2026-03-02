@@ -1,0 +1,11 @@
+services:
+  e2e-tests:
+    build: .
+    platform: linux/amd64
+    container_name: e2e-testing
+    environment:
+      - NODE_ENV=development
+    shm_size: '2gb'
+    volumes:
+      - .:/app
+      - /app/node_modules
