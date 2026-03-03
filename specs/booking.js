@@ -2,7 +2,7 @@ const { By, Builder, Browser, until } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');
 
 let options = new chrome.Options();
-options.addArguments('--headless=new');
+// options.addArguments('--headless=new');
 options.addArguments('--no-sandbox');
 options.addArguments('--disable-setuid-sandbox');
 options.addArguments('--disable-dev-shm-usage');
@@ -102,11 +102,11 @@ const serviceBuilder = chromedriverBin
 
       // Debug: capture state right after date click
       await driver.sleep(2000);
-      const urlAfterClick = await driver.getCurrentUrl();
-      console.log(`[DEBUG] URL after date click: ${urlAfterClick}`);
-      const screenshot = await driver.takeScreenshot();
-      require('fs').writeFileSync('/tmp/after_date_click.png', screenshot, 'base64');
-      console.log("[DEBUG] Screenshot saved to /tmp/after_date_click.png");
+      // const urlAfterClick = await driver.getCurrentUrl();
+      // console.log(`[DEBUG] URL after date click: ${urlAfterClick}`);
+      // const screenshot = await driver.takeScreenshot();
+      // require('fs').writeFileSync('/tmp/after_date_click.png', screenshot, 'base64');
+      // console.log("[DEBUG] Screenshot saved to /tmp/after_date_click.png");
     }
 
 
