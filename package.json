@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "node specs/booking.js"
+    "test": "node specs/thirtyMinBooking.js && node specs/sixtyMinBooking.js"
   },
   "keywords": [],
   "author": "",

@@ -2,7 +2,7 @@ const { By, Builder, Browser, until } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');
 
 let options = new chrome.Options();
-// options.addArguments('--headless=new');
+options.addArguments('--headless=new');
 options.addArguments('--no-sandbox');
 options.addArguments('--disable-setuid-sandbox');
 options.addArguments('--disable-dev-shm-usage');
@@ -73,8 +73,6 @@ const serviceBuilder = chromedriverBin
 
     /**
      * Helper to find and click the first available date in the calendar.
-     * The site requires clicking the <span> day number inside the <a> link
-     * within each non-past, non-disabled calendar cell.
      */
     async function clickFirstAvailableDate() {
       console.log("Searching for available date...");
@@ -102,27 +100,19 @@ const serviceBuilder = chromedriverBin
 
       // Debug: capture state right after date click
       await driver.sleep(2000);
-      // const urlAfterClick = await driver.getCurrentUrl();
-      // console.log(`[DEBUG] URL after date click: ${urlAfterClick}`);
-      // const screenshot = await driver.takeScreenshot();
-      // require('fs').writeFileSync('/tmp/after_date_click.png', screenshot, 'base64');
-      // console.log("[DEBUG] Screenshot saved to /tmp/after_date_click.png");
     }
 
 
-    /**
-     * Helper to find and click the first available time slot.
-     */
+    // Helper to find and click the first available time slot.
     async function clickFirstAvailableTimeSlot() {
-      console.log(`Finding an available time slot...`);
-      // Wait for UI to update after date click
+      console.log(`Finding the first available time slot...`);
+      
       await driver.sleep(3000);
 
-      // Try multiple XPath patterns to find time slot elements
       const slotXpaths = [
-        "//span[contains(normalize-space(), ':') and contains(normalize-space(), '-')]",     // e.g. "07:30 - 08:00"
-        "//button[contains(normalize-space(), ':') and contains(normalize-space(), '-')]",   // button-based slots
-        "//*[contains(@class,'time') or contains(@class,'slot') or contains(@class,'Time') or contains(@class,'Slot')]", // class-based
+        "//span[contains(normalize-space(), ':') and contains(normalize-space(), '-')]",     
+        "//button[contains(normalize-space(), ':') and contains(normalize-space(), '-')]",   
+        "//*[contains(@class,'time') or contains(@class,'slot') or contains(@class,'Time') or contains(@class,'Slot')]",
       ];
 
       let slots = [];
@@ -130,16 +120,16 @@ const serviceBuilder = chromedriverBin
         try {
           await driver.wait(until.elementLocated(By.xpath(xpath)), 8000);
           slots = await driver.findElements(By.xpath(xpath));
-          if (slots.length > 0) {
-            console.log(`Found ${slots.length} slot(s) using XPath: ${xpath}`);
+          if (slots.length > 1) {
+            console.log(`Found ${slots.length} slot(s)`);
             break;
           }
-        } catch (e) {
-          // try next XPath
-        }
+        } catch (e) {}
       }
 
       if (slots.length === 0) throw new Error("No available time slots found!");
+
+      const enabledSlots = [];
 
       for (const slot of slots) {
         try {
@@ -149,74 +139,124 @@ const serviceBuilder = chromedriverBin
           const parentClass = await parent.getAttribute('class') || "";
           const parentDisabled = await parent.getAttribute('disabled');
 
-          if (isEnabled && !classAttr.includes('disabled') && !parentClass.includes('disabled') && !parentDisabled) {
-            const timeText = await slot.getText();
-            console.log(`Clicking available slot: ${timeText}`);
-            await driver.executeScript("arguments[0].scrollIntoView({behavior:'instant',block:'center'});", slot);
-            try {
-              await slot.click();
-            } catch (e) {
-              await driver.executeScript("arguments[0].click();", slot);
-            }
-            return timeText;
+          if (
+            isEnabled &&
+            !classAttr.includes('disabled') &&
+            !parentClass.includes('disabled') &&
+            !parentDisabled
+          ) {
+            enabledSlots.push(slot);
           }
         } catch (err) {
-          console.log("Skipping an element due to error during check.");
+          console.log("Skipping element due to error.");
         }
       }
-      throw new Error("No enabled time slots found!");
+
+      if (enabledSlots.length < 2) {
+        throw new Error("Less than 2 enabled time slots available!");
+      }
+
+      const nextSlot = enabledSlots[0]; // 👉 second enabled slot
+      const timeText = await nextSlot.getText();
+
+      console.log(`Clicking NEXT available slot: ${timeText}`);
+
+      await driver.executeScript(
+        "arguments[0].scrollIntoView({behavior:'instant',block:'center'});",
+        nextSlot
+      );
+
+      try {
+        await nextSlot.click();
+      } catch (e) {
+        await driver.executeScript("arguments[0].click();", nextSlot);
+      }
+
+      return timeText;
     }
 
     // Step 2: Click on "Book a session"
     await clickElement("//div[@class='wp-block-group is-content-justification-right is-nowrap is-layout-flex wp-container-core-group-is-layout-c4f7172d wp-block-group-is-layout-flex']//a[@class='wp-block-button__link wp-element-button'][normalize-space()='Book a session']", 'Book a session');
 
-    // Step 4: Click on "Express Sauna (30 mins)"
+    // Step 3: Click on "Express Sauna (30 mins)"
     await clickElement("//div[@class='wp-block-uagb-container uagb-block-d7fd10bc alignfull uagb-is-root-container']//div[@class='wp-block-button has-custom-width wp-block-button__width-100 is-style-fill']", 'Express Sauna (30 mins)');
 
-    // Step 5: Click on "Continue"
-    await clickElement("//span[normalize-space()='Continue']", 'Continue (Step 5)');
+    // Step 4: Click on "Continue"
+    await clickElement("//span[normalize-space()='Continue']", 'Continue (Step 4)');
 
-    // Step 18: Click on "Express Sauna (30 mins)"
-    await clickElement("//div[@class='wp-block-uagb-container uagb-block-d7fd10bc alignfull uagb-is-root-container']//div[@class='wp-block-button has-custom-width wp-block-button__width-100 is-style-fill']", 'Express Sauna (Step 18)');
+    // Step 5: Click on "Express Sauna (30 mins)"
+    await clickElement("//div[@class='wp-block-uagb-container uagb-block-d7fd10bc alignfull uagb-is-root-container']//div[@class='wp-block-button has-custom-width wp-block-button__width-100 is-style-fill']", 'Express Sauna (Step 5)');
 
-    // Step 19: Click on "Continue"
-    await clickElement("//button[descendant::span[text()='Continue']]", 'Continue (Step 19)');
+    // Step 6: Click on "Continue"
+    await clickElement("//button[descendant::span[text()='Continue']]", 'Continue (Step 6)');
 
-    // Step 46: Click on available date
+    // Step 7: Click on available date
     await clickFirstAvailableDate();
 
-    // Step 47: Select first available time slot
+    // Step 8: Select first available time slot
     await clickFirstAvailableTimeSlot();
 
-    // Step 48: Click on "Continue"
-    await clickElement("//span[normalize-space()='Continue']", 'Continue (Step 48)');
+    // Step 9: Click on "Continue"
+    await clickElement("//span[normalize-space()='Continue']", 'Continue (Step 9)');
 
-    // Step 49: Click on "Continue"
-    await clickElement("//span[normalize-space()='Continue']", 'Continue (Step 49)');
+    // Step 10: Click on "Continue"
+    await clickElement("//span[normalize-space()='Continue']", 'Continue (Step 10)');
 
-    // Step 50: Click on "Continue"
-    await clickElement("//button[descendant::span[text()='Continue']]", 'Continue (Step 50)');
+    // Step 11: Click on "Continue"
+    await clickElement("//button[descendant::span[text()='Continue']]", 'Continue (Step 11)');
 
-    // Step: Click on "Sign in"
+    // Step 12: Click on "Sign in"
     await clickElement("//h5[normalize-space()='Sign in']", 'Sign in');
 
-    // Step: Enter email
+    // Step 13: Enter email
     await typeText("//input[contains(@placeholder,'example@gmail.com')]", 'rakibislam@boomdevs.com', 'Email field');
 
-    // Step: Enter password
+    // Step 14: Enter password
     await typeText("//input[@placeholder='Enter your password']", 'testuser', 'Password field');
 
-    // Step: Click on "Sign In"
+    // Step 15: Click on "Sign In"
     await clickElement("//button[@type='submit']", 'Sign In button');
 
-    // Step: Click on "Continue"
-    await clickElement("//button[descendant::span[text()='Continue']]", 'Continue (Step 51)');
+    // Step 16: Click on "Continue"
+    await clickElement("//button[descendant::span[text()='Continue']]", 'Continue (Step 16)');
 
-    // Step 58: Click on "Pay now"
-    await driver.sleep(3000);
+    // Step 17: Click on "Pay now"
+    await driver.sleep(5000);
     await clickElement("//button[descendant::span[text()='Pay now']] | //span[normalize-space()='Pay now']", 'Pay now');
 
-    console.log("Full 64-step test flow completed successfully!");
+    // Wait for and verify the "Booking created successfully" popup
+    console.log("Waiting for booking success notification...");
+    try {
+      const popup = await driver.wait(
+        until.elementLocated(By.xpath(
+          "//*[contains(@class,'success') or contains(@class,'notification') or contains(@class,'toast') or contains(@class,'alert') or contains(normalize-space(),'Booking created successfully') or contains(normalize-space(),'Time slot has already been booked by someone else') or contains(normalize-space(),'Error')]"
+        )),
+        10000
+      );
+      const popupText = await popup.getText();
+
+      // Screenshot capturing the popup
+      const screenshot = await driver.takeScreenshot();
+      require('fs').writeFileSync('/tmp/booking_success_30min.png', screenshot, 'base64');
+      console.log("📸 Screenshot saved to /tmp/booking_success_30min.png");
+
+      // Fail the test if it's an error notification
+      const lowerText = popupText.toLowerCase();
+      if (lowerText.includes('error') || lowerText.includes('Time slot has already been booked by someone else') || lowerText.includes('failed')) {
+        throw new Error(`❌ Booking failed with notification: ${popupText}`);
+      }
+
+      console.log("✅ Booking successful! Notification:", popupText);
+      console.log("Full 17-step test flow completed successfully!");
+    } catch (popupErr) {
+      if (popupErr.message && popupErr.message.startsWith('❌')) {
+        throw popupErr; // Re-throw booking errors
+      }
+      console.log("⚠️ No popup detected within timeout. Taking screenshot for inspection...");
+      const screenshot = await driver.takeScreenshot();
+      require('fs').writeFileSync('/tmp/booking_success_30min.png', screenshot, 'base64');
+      console.log("📸 Screenshot saved to /tmp/booking_success_30min.png");
+    }
 
   } catch (e) {
     console.log("Error during test execution:");
